@@ -10,7 +10,7 @@ from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from flask_script import Shell, Manager
 from flask_migrate import Migrate, MigrateCommand
-from flask_mail import Mail
+from flask_mail import Mail, Message
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 # app的相关配置
@@ -25,6 +25,10 @@ app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 1271997525
 app.config['MAIL_PASSWORD'] = 'sodvdrykulkeiggg'
+app.config['FLASKY_MAIL_SUBJECT_PREFIX'] = 'Flasky'
+app.config['FLASKY_MAIL_SENDER']='1271997525@qq.com'
+app.config['FLASKY_ADMIN'] = os.environ.get('FLASKY_ADMIN')
+
 
 # 数据库处理
 db = SQLAlchemy(app)
@@ -47,6 +51,8 @@ def index():
             db.session.add(user)
             db.session.commit()
             session['known'] = False
+            if app.config['FLASKY_ADMIN']:
+                send_email( 'New User', 'mail/new_user', user=user)
         else:
             session['known'] = True
         # 两次输入数据的提醒
@@ -87,7 +93,13 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 migrate = Migrate(app, db)
 manager.add_command('db', MigrateCommand)
 
+def send_email(subject, template, **kwargs):
+    msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + subject,
+                  sender=app.config['FLASKY_MAIL_SENDER'], recipients=['jingjingdexue@outlook.com'])
+    msg.body = render_template(template + 'txt', **kwargs)
+    msg.html = render_template(template + 'html', **kwargs)
+    mail.send(msg)
 
 if __name__ == '__main__':
-    manager.run()
+    app.run()
 
